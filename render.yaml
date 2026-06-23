@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: library-api
+    env: node
+    buildCommand: npm install && npx turbo run build --filter=api...
+    startCommand: cd apps/api && npm run start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: PORT
+        value: 5000

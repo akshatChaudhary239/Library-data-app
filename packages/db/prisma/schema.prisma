@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  password     String
+  name         String
+  phone        String?
+  isVerified   Boolean   @default(false)
+  library      Library?
+  refreshTokens RefreshToken[]
+  auditLogs    AuditLog[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  @@map("users")
+}
+
+model Library {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  ownerName          String
+  phone              String
+  address            String
+  totalSeats         Int
+  defaultMonthlyFee  Decimal   @db.Decimal(10, 2)
+  openingTime        String    // "09:00"
+  closingTime        String    // "22:00"
+  students           Student[]
+  seats              Seat[]
+  notes              Note[]
+  notifications      Notification[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  @@map("libraries")
+}
+
+model Student {
+  id                    String    @id @default(cuid())
+  libraryId             String
+  library               Library   @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  name                  String
+  phone                 String
+  email                 String?
+  address               String?
+  seatNumber            Int?
+  seat                  Seat?     @relation(fields: [seatNumber, libraryId], references: [number, libraryId])
+  joiningDate           DateTime  @default(now())
+  subscriptionStartDate DateTime
+  subscriptionEndDate   DateTime
+  monthlyFee            Decimal   @db.Decimal(10, 2)
+  status                StudentStatus @default(ACTIVE)
+  photoUrl              String?
+  notes                 String?
+  payments              Payment[]
+  attendances           Attendance[]
+  subscriptions         StudentSubscription[]
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  @@map("students")
+}
+
+enum StudentStatus { 
+  ACTIVE
+  INACTIVE
+  EXPIRED 
+}
+
+model Seat {
+  id         String      @id @default(cuid())
+  libraryId  String
+  library    Library     @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  number     Int
+  status     SeatStatus  @default(AVAILABLE)
+  students   Student[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  @@unique([libraryId, number])
+  @@map("seats")
+}
+
+enum SeatStatus { 
+  AVAILABLE
+  OCCUPIED
+  RESERVED 
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  studentId     String
+  student       Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  amount        Decimal       @db.Decimal(10, 2)
+  paymentDate   DateTime      @default(now())
+  paymentMethod PaymentMethod @default(CASH)
+  monthCovered  DateTime      // First day of month covered
+  remarks       String?
+  receiptNumber String        @unique @default(cuid())
+  createdAt     DateTime      @default(now())
+  @@map("payments")
+}
+
+enum PaymentMethod { 
+  CASH
+  UPI
+  BANK_TRANSFER
+  CHEQUE
+  OTHER 
+}
+
+model Attendance {
+  id           String           @id @default(cuid())
+  studentId    String
+  student      Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  date         DateTime         @db.Date
+  checkInTime  DateTime?
+  checkOutTime DateTime?
+  status       AttendanceStatus @default(PRESENT)
+  @@unique([studentId, date])
+  @@map("attendances")
+}
+
+enum AttendanceStatus { 
+  PRESENT
+  ABSENT
+  LATE 
+}
+
+model StudentSubscription {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  startDate DateTime
+  endDate   DateTime
+  fee       Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  @@map("student_subscriptions")
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  libraryId String
+  library   Library  @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("notes")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  libraryId String
+  library   Library          @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  studentId String?
+  createdAt DateTime         @default(now())
+  @@map("notifications")
+}
+
+enum NotificationType { 
+  FEE_DUE
+  SUBSCRIPTION_EXPIRING
+  OVERDUE
+  VACANT_SEAT
+  RENEWAL 
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String
+  entity     String
+  entityId   String
+  changes    Json?
+  createdAt  DateTime @default(now())
+  @@map("audit_logs")
+}
