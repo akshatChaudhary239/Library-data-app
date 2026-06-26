@@ -63,7 +63,7 @@ export default function StudentsPage() {
           <Button variant="outline" onClick={handleExportCSV} disabled={!students || students.length === 0}>
             Export CSV
           </Button>
-          <Button onClick={() => router.push('/students/add')}>
+          <Button onClick={() => router.push('/students/new')}>
             <Plus className="h-4 w-4 mr-2" /> Add Student
           </Button>
         </div>
